@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import pdfquery # type: ignore
-from pdfquery.cache import FileCache
+from pdfquery.cache import FileCache # type: ignore
 from datetime import date, datetime
 from typing import NamedTuple, List
 
@@ -16,8 +16,7 @@ _DATE_FORMAT = "%d %b %y"
 # parses credit card statementc circa april 2018
 def yield_credit_infos(fname: str):
     pdf = pdfquery.PDFQuery(fname) # , parse_tree_cacher=FileCache("/tmp/")) # TODO more specific path?
-    print(fname)
-    # TODO wtf?? returns frong file..
+    # TODO wtf?? returns wrong file if I use cache..
     pdf.load()
 
     tdet = pdf.pq('LTTextBoxHorizontal:contains("Transaction Details")')[0]
@@ -46,8 +45,21 @@ def yield_credit_infos(fname: str):
             amount=amount.strip()
         )
 
-def get_gredit_infos(fname: str) -> List[Transaction]:
+# ugh. fuck it for now.
+# def yield_debit_infos(fname: str):
+#     pdf = pdfquery.PDFQuery(fname) # , parse_tree_cacher=FileCache("/tmp/")) # TODO more specific path?
+#     pdf.load()
+
+#     tdet = pdf.pq('LTTextBoxHorizontal:contains("see reverse")')[0]
+#     children = list(tdet.getparent().iterchildren())[4:]
+#     [date_col, _, _, _, _, comment_col] ..
+#     pass
+
+def get_credit_infos(fname: str) -> List[Transaction]:
     return list(yield_credit_infos(fname))
+
+# def get_debit_infos(*args, **kwargs):
+#     return list(yield_credit_infos)
 
 def main():
     import sys
