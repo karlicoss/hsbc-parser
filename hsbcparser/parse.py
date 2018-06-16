@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import pdfquery # type: ignore
-from pdfquery.cache import FileCache # type: ignore
 from datetime import date, datetime
 from typing import NamedTuple, List
+from subprocess import check_output
 
 class Transaction(NamedTuple):
     received: date
@@ -13,37 +13,52 @@ class Transaction(NamedTuple):
 
 _DATE_FORMAT = "%d %b %y"
 
-# parses credit card statementc circa april 2018
+TABULA_PATH = "/L/soft/tabula/tabula-1.0.2.jar" # TODO unhardcode
+
+# parses credit card statementc circa june 2018
 def yield_credit_infos(fname: str):
-    pdf = pdfquery.PDFQuery(fname) # , parse_tree_cacher=FileCache("/tmp/")) # TODO more specific path?
-    # TODO wtf?? returns wrong file if I use cache..
-    pdf.load()
+    CMD = [
+        'java',
+        '-jar', TABULA_PATH,
+        '--pages', 'all',
+        '--silent',
+        fname,
+    ]
+    res = check_output(CMD).decode('utf-8')
 
-    tdet = pdf.pq('LTTextBoxHorizontal:contains("Transaction Details")')[0]
+    def try_transaction(line):
+        line = line.strip('"') # ugh, pdf sucks
 
-    [_, received_date_col, transation_date_col, details_col, _, _, _, _, amount_col] = list(tdet.itersiblings())[:9]
+        def try_parse_date(ds: str):
+            try:
+                return datetime.strptime(ds, _DATE_FORMAT)
+            except:
+                return None
 
-    received_dates = list(received_date_col.itertext())
-    transation_dates = list(transation_date_col.itertext())
-    details = list(details_col.itertext())
-    amounts = list(amount_col.itertext())
+        datelen = len("11 May 18")
+        # TODO some stupid semicolon...
+        rdates = line[:datelen]
+        ddates = line[datelen + 1: datelen + 1 + datelen]
+        rdate = try_parse_date(rdates)
+        ddate = try_parse_date(ddates)
+        if rdate is None and ddate is None:
+            return
 
-    infos = list(zip(received_dates, transation_dates, details, amounts))
+        rest = line[datelen + 1 + datelen:].split(',')
+        amount = rest[-1]
+        details = ' '.join(rest[:-1])
 
-    for info in infos:
-        if all(s == '' for s in info):
-            # sometimes there is an empty line.. weird
-            # TODO stderr?
-            continue
-        [recvs, trans, det, amount] = info
-        recv_date = datetime.strptime(recvs.strip(), _DATE_FORMAT).date()
-        trans_date = datetime.strptime(trans.strip(), _DATE_FORMAT).date()
         yield Transaction(
-            received=recv_date,
-            date=trans_date,
-            details=det.strip(),
-            amount=amount.strip()
+            received=rdate.date(),
+            date=ddate.date(),
+            details=details,
+            amount=amount,
         )
+
+
+    for line in res.splitlines():
+        for t in try_transaction(line):
+            yield t
 
 # ugh. fuck it for now.
 # def yield_debit_infos(fname: str):
