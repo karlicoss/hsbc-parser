@@ -15,6 +15,21 @@ _DATE_FORMAT = "%d %b %y"
 
 TABULA_PATH = "/L/soft/tabula/tabula-1.0.2.jar" # TODO unhardcode
 
+def try_sanitize_amount(amnts):
+    xxx = amnts.split()
+    numberish = []
+    for x in xxx:
+        try:
+            float(x)
+        except ValueError:
+            continue
+        else:
+            numberish.append(x)
+    if len(numberish) == 1:
+        return numberish[0]
+    else:
+        return amnts
+
 # parses credit card statementc circa june 2018
 def yield_credit_infos(fname: str):
     CMD = [
@@ -47,6 +62,12 @@ def yield_credit_infos(fname: str):
         rest = line[datelen + 1 + datelen:].split(',')
         amount = rest[-1]
         details = ' '.join(rest[:-1])
+
+        # TODO sometimes it's necessary to sanitize amount...
+
+        # if 'GRACEC' in details:
+        #     import ipdb; ipdb.set_trace() 
+        amount = try_sanitize_amount(amount)
 
         yield Transaction(
             received=rdate.date(),
