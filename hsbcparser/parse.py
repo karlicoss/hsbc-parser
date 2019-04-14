@@ -54,6 +54,7 @@ def yield_credit_infos(fname: str):
         # TODO some stupid semicolon...
         rdates = line[:datelen]
         ddates = line[datelen + 1: datelen + 1 + datelen]
+        ddates = ddates.replace(',', ' ') # sometimes there is random comma :shrug:
         rdate = try_parse_date(rdates)
         ddate = try_parse_date(ddates)
         if rdate is None and ddate is None:
