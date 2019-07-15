@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-import pdfquery # type: ignore
 from datetime import date, datetime
 from typing import NamedTuple, List
 from subprocess import check_output
+import csv
+
+import pdfquery # type: ignore
 
 class Transaction(NamedTuple):
     received: date
@@ -43,7 +45,7 @@ def yield_credit_infos(fname: str):
     res = check_output(CMD).decode('utf-8')
 
     def try_transaction(line):
-        line = line.strip('"') # ugh, pdf sucks
+        # line = line.strip('"') # ugh, pdf sucks
 
         def try_parse_date(ds: str):
             try:
@@ -61,14 +63,16 @@ def yield_credit_infos(fname: str):
         if rdate is None and ddate is None:
             return
 
-        rest = line[datelen + 1 + datelen:].split(',')
-        amount = rest[-1]
+
+        lline = line[datelen + 1 + datelen:]
+        rest = next(csv.reader([lline]))
+        amount = rest[-1].replace(',', '')
         details = ' '.join(rest[:-1])
 
         # TODO sometimes it's necessary to sanitize amount...
 
-        # if 'GRACEC' in details:
-        #     import ipdb; ipdb.set_trace() 
+        # TODO parse CR from amount?
+        # import ipdb; ipdb.set_trace() 
         amount = try_sanitize_amount(amount)
 
         yield Transaction(
