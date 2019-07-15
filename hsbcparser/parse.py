@@ -13,7 +13,8 @@ class Transaction(NamedTuple):
 
 _DATE_FORMAT = "%d %b %y"
 
-TABULA_PATH = "/L/soft/tabula/tabula-1.0.2.jar" # TODO unhardcode
+# TODO unhardcode
+TABULA_PATH = '/L/zzz_syncthing/soft/tabula/tabula-1.0.2.jar'
 
 def try_sanitize_amount(amnts):
     xxx = amnts.split()
