@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import re
@@ -10,37 +9,14 @@ from pathlib import Path
 
 from more_itertools import consecutive_groups
 
+from .common import parse_date, is_empty, parse_money, Transaction
+
 
 def inputs(data: Path) -> list[Path]:
     # TODO use get_inputs form hpi?
     res = sorted(data.glob('*.pdf'))
     assert len(res) > 0
     return res
-
-
-@dataclass
-class Transaction:
-    dt: date
-    """
-    HSBC only has date, not time
-    """
-
-    details: str
-
-    change_str: str | None
-    """
-    Can be None if it's a pure balance transaction
-    """
-
-    balance_str: str | None
-    """
-    Balance after current transaction
-    """
-
-    # todo maybe add transaction number? to make it easier to sort?
-
-    def __post_init__(self) -> None:
-        assert not (self.change_str is None and self.balance_str is None)
 
 
 def _extract_tables(text: str) -> Iterator[list[str]]:
@@ -155,21 +131,6 @@ def _cleanup_table(dirty_table: list[str]) -> list[list[str]]:
     return data_entries
 
 
-def is_empty(s: str) -> bool:
-    return len(s) == 0
-
-
-def parse_money(x: str) -> None | str:
-    """
-    Remove , separators and check that amount is actually a number
-    """
-    if is_empty(x):
-        return None
-    x = x.replace(',', '')
-    float(x)  # sanity check, but we want preserve str to avoid floating point stuff?
-    return x
-
-
 def extract_transactions(pdf: Path) -> Iterator[Transaction]:
     text = subprocess.check_output([
         'pdftotext',
@@ -195,7 +156,7 @@ def extract_transactions(pdf: Path) -> Iterator[Transaction]:
         row_date, row_details, paidouts, paidins, balances = row
         if not is_empty(row_date):
             # if it has a date, keep it as 'current' date (there might be multiple entries for the same date)
-            cur_date = datetime.strptime(row_date, '%d %b %y').date()
+            cur_date = parse_date(row_date)
 
         cur_details.append(row_details)
         if is_empty(paidouts) and is_empty(paidins) and is_empty(balances):
